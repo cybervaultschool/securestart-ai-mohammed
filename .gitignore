@@ -1,0 +1,20 @@
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor droppings
+*.swp
+*~
+.vscode/
+.idea/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Secrets — none exist in this project; keep it that way
+.env
+.env.*
+*.pem
+*.key

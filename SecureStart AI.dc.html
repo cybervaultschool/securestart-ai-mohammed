@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/classical-ba6438f1-5613-4168-866e-92b980c1e532/styles.css">
+  <script src="_ds/classical-ba6438f1-5613-4168-866e-92b980c1e532/_ds_bundle.js"></script>
+  <style>
+    :root{
+      --color-accent:#2d7d7a; --color-accent-2:#2d7d7a;
+      --color-accent-100:#e3f4f3; --color-accent-200:#c2e7e5; --color-accent-300:#8fd0cd;
+      --color-accent-400:#5aaeaa; --color-accent-500:#35918d; --color-accent-600:#1f716e;
+      --color-accent-700:#155450; --color-accent-800:#0e3b39; --color-accent-900:#0b2a28;
+      --color-accent-2-100:#e3f4f3; --color-accent-2-200:#c2e7e5; --color-accent-2-300:#8fd0cd;
+      --color-accent-2-400:#5aaeaa; --color-accent-2-500:#35918d; --color-accent-2-600:#1f716e;
+      --color-accent-2-700:#155450; --color-accent-2-800:#0e3b39; --color-accent-2-900:#0b2a28;
+    }
+    body{margin:0;background:var(--color-bg);color:var(--color-text)}
+    a{color:var(--color-accent-700)} a:hover{color:var(--color-accent-600)}
+    @media print{ [data-no-print]{display:none !important} body{background:#fff} }
+    @media screen{ [data-print-only]{display:none !important} }
+  </style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-direction:column;font-family:var(--font-body)">
+  <header class="nav" data-no-print="true" style="justify-content:center">
+    <span class="nav-brand">SecureStart AI</span>
+  </header>
+  <main style="flex:1;width:100%;max-width:720px;margin:0 auto;padding:var(--space-7) var(--space-4) var(--space-8);box-sizing:border-box">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <section data-screen-label="Home" style="display:flex;flex-direction:column;gap:var(--space-5)">
+        <div style="font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-700);font-feature-settings:'tnum'">Basic security assessment</div>
+        <h1 style="font-family:var(--font-heading);font-weight:500;font-size:clamp(34px,5vw,52px);line-height:1.1;margin:0;text-wrap:pretty">Understand Your Basic Security Readiness</h1>
+        <p style="font-size:19px;line-height:1.6;margin:0;max-width:56ch;text-wrap:pretty">Answer ten plain-language questions and receive three practical security actions for your small business.</p>
+        <p style="margin:0;color:var(--color-neutral-700);font-size:15px">For small-business owners and office managers. No technical experience required.</p>
+        <div>
+          <button class="btn btn-primary" onClick="{{ startAssessment }}">Start Assessment</button>
+        </div>
+        <hr class="hr" style="margin:var(--space-3) 0 0">
+        <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700);max-width:64ch">SecureStart AI provides educational guidance based only on your answers. It does not inspect your systems or replace a professional security assessment. Do not enter passwords, credentials, customer records, or confidential information.</p>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isAssessment }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Assessment" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <h1 style="font-family:var(--font-heading);font-weight:500;font-size:34px;line-height:1.15;margin:0">Basic Security Assessment</h1>
+        <p style="margin:0;color:var(--color-neutral-700)">Answer all ten questions based on your current security practices.</p>
+        <div style="display:flex;flex-direction:column;gap:var(--space-2)">
+          <div style="font-size:13px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700);font-feature-settings:'tnum'">Question {{ qNumber }} of 10</div>
+          <div style="height:3px;background:var(--color-divider)">
+            <div style="height:3px;background:var(--color-accent);width:{{ progressPct }}%;transition:width 0.25s ease"></div>
+          </div>
+        </div>
+        <div class="card" style="padding:var(--space-5)">
+          <div style="font-family:var(--font-heading);font-weight:500;font-size:24px;line-height:1.35;margin-bottom:var(--space-4);text-wrap:pretty">{{ currentQuestion }}</div>
+          <div role="radiogroup" aria-label="Answer" style="display:grid;gap:var(--space-2)">
+            <label class="radio" style="border:1px solid {{ yesBorder }};padding:12px 16px;border-radius:var(--radius-md)"><input type="radio" name="answer" value="yes" checked="{{ yesChecked }}" onChange="{{ pickYes }}"><span class="dot"></span>Yes</label>
+            <label class="radio" style="border:1px solid {{ partlyBorder }};padding:12px 16px;border-radius:var(--radius-md)"><input type="radio" name="answer" value="partly" checked="{{ partlyChecked }}" onChange="{{ pickPartly }}"><span class="dot"></span>Partly / Unsure</label>
+            <label class="radio" style="border:1px solid {{ noBorder }};padding:12px 16px;border-radius:var(--radius-md)"><input type="radio" name="answer" value="no" checked="{{ noChecked }}" onChange="{{ pickNo }}"><span class="dot"></span>No</label>
+          </div>
+        </div>
+        <sc-if value="{{ showValidation }}" hint-placeholder-val="{{ false }}">
+          <p role="alert" style="margin:0;color:var(--color-accent-800);font-size:14.5px;border-left:2px solid var(--color-accent);padding-left:12px">Please select an answer before continuing.</p>
+        </sc-if>
+        <div style="display:flex;gap:var(--space-3);justify-content:space-between">
+          <button class="btn btn-secondary" onClick="{{ goBack }}">Back</button>
+          <button class="btn btn-primary" onClick="{{ goContinue }}">Continue</button>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Review Answers" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <h1 style="font-family:var(--font-heading);font-weight:500;font-size:34px;line-height:1.15;margin:0">Review Your Answers</h1>
+        <p style="margin:0;color:var(--color-neutral-700)">Check your answers before calculating the result.</p>
+        <div class="card" style="padding:0">
+          <sc-for list="{{ reviewRows }}" as="row" hint-placeholder-count="10">
+            <div style="display:flex;align-items:baseline;gap:var(--space-3);padding:14px var(--space-4);border-bottom:1px solid var(--color-divider)">
+              <span style="font-feature-settings:'tnum';color:var(--color-neutral-700);font-size:14px;min-width:20px">{{ row.num }}</span>
+              <span style="flex:1;font-size:15px;line-height:1.5">{{ row.text }}</span>
+              <span style="font-size:14.5px;font-style:italic;color:{{ row.answerColor }};white-space:nowrap">{{ row.answerLabel }}</span>
+              <a href="#" onClick="{{ row.edit }}" style="font-size:13.5px;white-space:nowrap">Edit</a>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:var(--space-5);flex-wrap:wrap;font-size:13.5px;color:var(--color-neutral-700);font-feature-settings:'tnum'">
+          <span>Yes = 2 points</span><span>Partly / Unsure = 1 point</span><span>No = 0 points</span><span>Maximum score = 20 points</span>
+        </div>
+        <sc-if value="{{ showReviewError }}" hint-placeholder-val="{{ false }}">
+          <p role="alert" style="margin:0;color:var(--color-accent-800);font-size:14.5px;border-left:2px solid var(--color-accent);padding-left:12px">{{ reviewErrorText }}</p>
+        </sc-if>
+        <div style="display:flex;gap:var(--space-3);justify-content:space-between;align-items:center">
+          <button class="btn btn-secondary" onClick="{{ backToAssessment }}">Back to Assessment</button>
+          <button class="btn btn-primary" onClick="{{ calculate }}" disabled="{{ calcDisabled }}">Calculate Results</button>
+        </div>
+        <hr class="hr" style="margin:0">
+        <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)">The result is based only on the answers provided. SecureStart AI does not verify your systems or security controls.</p>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isResults }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Results" style="display:flex;flex-direction:column;gap:var(--space-5)">
+        <sc-if value="{{ hasResults }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:var(--space-5)">
+            <h1 style="font-family:var(--font-heading);font-weight:500;font-size:34px;line-height:1.15;margin:0">Your Security Readiness Summary</h1>
+            <div style="display:flex;align-items:baseline;gap:var(--space-3);border-bottom:1px solid var(--color-divider);padding-bottom:var(--space-4)">
+              <span style="font-family:var(--font-heading);font-weight:400;font-size:88px;line-height:1;font-feature-settings:'tnum';color:var(--color-accent-700)">{{ score }}</span>
+              <span style="font-family:var(--font-heading);font-size:28px;color:var(--color-neutral-700)">/ 20 educational score</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-3)">
+              <div class="card" style="padding:var(--space-4)">
+                <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:6px">Completed</div>
+                <div style="font-family:var(--font-heading);font-size:32px;font-feature-settings:'tnum'">{{ completedCount }} of 10</div>
+              </div>
+              <div class="card" style="padding:var(--space-4)">
+                <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:6px">Answered Yes</div>
+                <div style="font-family:var(--font-heading);font-size:32px;font-feature-settings:'tnum'">{{ yesCount }}</div>
+              </div>
+              <div class="card" style="padding:var(--space-4)">
+                <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:6px">No or Partly / Unsure</div>
+                <div style="font-family:var(--font-heading);font-size:32px;font-feature-settings:'tnum'">{{ gapCount }}</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-3)">
+              <div class="card" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)">
+                <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700)">Strengths</div>
+                <sc-if value="{{ hasStrengths }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+                    <sc-for list="{{ strengths }}" as="st" hint-placeholder-count="3">
+                      <span class="tag tag-outline">{{ st.area }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noStrengths }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:0;font-size:13.5px;color:var(--color-neutral-700)">No questions were answered Yes.</p>
+                </sc-if>
+              </div>
+              <div class="card" style="padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)">
+                <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700)">Areas requiring attention</div>
+                <sc-if value="{{ hasAttention }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">
+                    <sc-for list="{{ attention }}" as="at" hint-placeholder-count="3">
+                      <span class="tag tag-outline">{{ at.area }} — {{ at.answerLabel }}</span>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noAttention }}" hint-placeholder-val="{{ false }}">
+                  <p style="margin:0;font-size:13.5px;color:var(--color-neutral-700)">No areas require attention based on your answers.</p>
+                </sc-if>
+              </div>
+            </div>
+            <p style="margin:0;font-size:17px;line-height:1.65;max-width:60ch;text-wrap:pretty">{{ summaryText }}</p>
+            <div data-no-print="true" style="display:flex;gap:var(--space-3);align-items:center;flex-wrap:wrap">
+              <button class="btn btn-primary" onClick="{{ viewPlan }}">View My Action Plan</button>
+              <button class="btn btn-secondary" onClick="{{ goReview }}">Review Answers</button>
+              <button class="btn btn-secondary" onClick="{{ printResults }}">Print Results</button>
+            </div>
+            <div data-print-only="true" style="display:flex;flex-direction:column;gap:var(--space-4)">
+              <hr class="hr" style="margin:0">
+              <h2 style="font-family:var(--font-heading);font-weight:500;font-size:26px;margin:0">Why These Areas Matter</h2>
+              <p style="margin:0;font-size:14px;color:var(--color-neutral-700)">Explanations for the controls you marked No or Partly / Unsure.</p>
+              <sc-for list="{{ gapExplanations }}" as="gap" hint-placeholder-count="3">
+                <div style="border-top:1px solid var(--color-divider);padding-top:var(--space-3);display:flex;flex-direction:column;gap:6px;break-inside:avoid">
+                  <div style="font-size:14px;line-height:1.5"><span style="font-feature-settings:'tnum';color:var(--color-neutral-700)">{{ gap.num }}. </span>{{ gap.text }}</div>
+                  <div style="font-size:13.5px;font-style:italic;color:var(--color-neutral-700)">Your answer: {{ gap.answerLabel }}</div>
+                  <div style="font-size:14px;line-height:1.6">{{ gap.explain }}</div>
+                  <div style="font-size:14px;line-height:1.6"><span style="font-style:italic;color:var(--color-neutral-700)">What to do — </span>{{ gap.what }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <hr class="hr" style="margin:0">
+            <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700);max-width:64ch">SecureStart AI provides educational guidance based only on your answers. It does not inspect your systems or replace a professional security assessment. It is not a vulnerability score, compliance result, professional audit, or guarantee of security.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noResults }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4);align-items:flex-start;padding:var(--space-6) 0">
+            <h1 style="font-family:var(--font-heading);font-weight:500;font-size:30px;margin:0">Your Security Readiness Summary</h1>
+            <p style="margin:0;color:var(--color-neutral-700);max-width:52ch;line-height:1.65">No assessment results are available yet. Complete the ten security questions to receive your readiness summary.</p>
+            <button class="btn btn-primary" onClick="{{ startAssessment }}">Start Assessment</button>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isPlan }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Action Plan" style="display:flex;flex-direction:column;gap:var(--space-4)">
+        <h1 style="font-family:var(--font-heading);font-weight:500;font-size:34px;line-height:1.15;margin:0">{{ planTitle }}</h1>
+        <sc-if value="{{ hasActions }}" hint-placeholder-val="{{ true }}">
+          <p style="margin:0;color:var(--color-neutral-700)">These actions are based on the controls you marked No or Partly / Unsure.</p>
+        </sc-if>
+        <sc-if value="{{ hasActions }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:var(--space-4)">
+            <sc-for list="{{ priorityActions }}" as="act" hint-placeholder-count="3">
+              <div class="card" style="padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)">
+                <div style="display:flex;align-items:center;gap:var(--space-3);justify-content:space-between;flex-wrap:wrap">
+                  <span style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-700);font-feature-settings:'tnum'">Priority {{ act.rank }}</span>
+                  <span class="tag tag-outline">{{ act.area }}</span>
+                </div>
+                <div style="font-family:var(--font-heading);font-weight:500;font-size:26px;line-height:1.25">{{ act.title }}</div>
+                <div style="display:grid;gap:var(--space-2);font-size:15px;line-height:1.6">
+                  <div><span style="font-style:italic;color:var(--color-neutral-700)">Why it matters — </span>{{ act.why }}</div>
+                  <div><span style="font-style:italic;color:var(--color-neutral-700)">First practical step — </span>{{ act.first }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <sc-if value="{{ noActions }}" hint-placeholder-val="{{ false }}">
+          <p style="margin:0;line-height:1.65;max-width:56ch">You answered Yes to all ten questions, so no priority actions were identified. Continue maintaining these practices and repeat the assessment periodically.</p>
+        </sc-if>
+        <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)">Review these actions with an appropriate IT or security professional before implementation.</p>
+        <div data-no-print="true" style="display:flex;gap:var(--space-3);flex-wrap:wrap;border-top:1px solid var(--color-divider);padding-top:var(--space-4)">
+          <button class="btn btn-secondary" onClick="{{ goReview }}">Review My Answers</button>
+          <button class="btn btn-secondary" onClick="{{ restart }}">Start a New Assessment</button>
+          <button class="btn btn-primary" onClick="{{ printPlan }}">Print Action Plan</button>
+        </div>
+      </section>
+    </sc-if>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem('securestart_v1') || 'null'); } catch (e) {}
+    this.state = {
+      screen: (saved && saved.screen) || 'home',
+      qIndex: (saved && saved.qIndex) || 0,
+      answers: (saved && Array.isArray(saved.answers) && saved.answers.length === 10) ? saved.answers : Array(10).fill(null),
+      showValidation: false,
+      reviewError: null
+    };
+    this.questions = [
+      'Is multi-factor authentication required for email and administrator accounts?',
+      'Does each person use a unique password stored in an approved password manager?',
+      'Are important business files backed up, and has a restore been tested?',
+      'Are operating systems, browsers, and business applications updated regularly?',
+      'Do business computers use active, centrally managed endpoint protection?',
+      'Is full-disk encryption enabled on laptops and portable business devices?',
+      'Do employees receive practical phishing and security-awareness training?',
+      'Are administrator accounts separate from normal day-to-day accounts?',
+      'Does the business have a written security-incident contact and response plan?',
+      'Is remote access restricted to approved users and protected with multi-factor authentication?'
+    ];
+    this.actions = [
+      { title: 'Require MFA for email and administrator accounts.', why: 'MFA adds protection when a password is stolen.', first: 'Identify email and administrator accounts that do not require MFA.', area: 'Identity' },
+      { title: 'Adopt unique passwords and an approved password manager.', why: 'Reused passwords allow one stolen password to affect several accounts.', first: 'Identify shared or reused passwords and select an approved password manager.', area: 'Passwords' },
+      { title: 'Document backups and complete a controlled restore test.', why: 'A backup provides value only when the business can restore its information.', first: 'Select one important file and complete a controlled restore test.', area: 'Recovery' },
+      { title: 'Create a regular update process.', why: 'Updates correct known security weaknesses and software defects.', first: 'List business devices and confirm whether automatic updates are enabled.', area: 'Updates' },
+      { title: 'Enable and monitor endpoint protection.', why: 'Endpoint protection helps identify and contain malicious activity on business devices.', first: 'Confirm which devices lack active protection or central monitoring.', area: 'Devices' },
+      { title: 'Enable full-disk encryption on portable business devices.', why: 'Encryption reduces data exposure if a device is lost or stolen.', first: 'Check the encryption status of every business laptop.', area: 'Data protection' },
+      { title: 'Provide practical phishing-awareness training.', why: 'Employees need a clear way to recognize and report suspicious messages.', first: 'Schedule a short training session and explain how to report suspicious email.', area: 'People' },
+      { title: 'Separate administrator accounts from daily-use accounts.', why: 'Separate accounts reduce unnecessary use of powerful permissions.', first: 'Identify people who use administrator access for email or normal browsing.', area: 'Access' },
+      { title: 'Create a one-page incident contact and response plan.', why: 'Clear contacts and first steps reduce confusion during an incident.', first: 'Document who employees contact when they suspect phishing or account compromise.', area: 'Response' },
+      { title: 'Restrict remote access and require MFA.', why: 'Exposed or weakly protected remote access can provide entry to business systems.', first: 'List remote-access methods and confirm the approved users and MFA status.', area: 'Remote access' }
+    ];
+  }
+  persist() {
+    try { localStorage.setItem('securestart_v1', JSON.stringify({ screen: this.state.screen, qIndex: this.state.qIndex, answers: this.state.answers })); } catch (e) {}
+  }
+  go(screen, extra) { this.setState(Object.assign({ screen, showValidation: false, reviewError: null }, extra || {}), () => this.persist()); }
+  setAnswer(val) {
+    const answers = this.state.answers.slice();
+    answers[this.state.qIndex] = val;
+    this.setState({ answers, showValidation: false }, () => this.persist());
+  }
+  answerLabel(v) { return v === 'yes' ? 'Yes' : v === 'partly' ? 'Partly / Unsure' : v === 'no' ? 'No' : 'Not answered'; }
+  renderVals() {
+    const s = this.state;
+    const complete = s.answers.every(a => a !== null);
+    const yesCount = s.answers.filter(a => a === 'yes').length;
+    const partlyCount = s.answers.filter(a => a === 'partly').length;
+    const completedCount = s.answers.filter(a => a !== null).length;
+    const score = yesCount * 2 + partlyCount;
+    const gapCount = s.answers.filter(a => a === 'no' || a === 'partly').length;
+    const cur = s.answers[s.qIndex];
+    const accentBorder = 'var(--color-accent)';
+    const plainBorder = 'var(--color-divider)';
+    let summaryText;
+    if (score === 20) summaryText = 'Your answers indicate that all ten foundational practices are in place. Continue maintaining them and repeat this assessment periodically.';
+    else if (score >= 15) summaryText = 'Your answers indicate that most of the ten foundational practices are in place. The action plan focuses on the remaining gaps.';
+    else if (score >= 8) summaryText = 'Your answers indicate that some foundational practices are in place, while others are missing or only partly in place. The action plan highlights the areas to address first.';
+    else summaryText = 'Your answers indicate that several foundational practices are not yet in place or are only partly in place. The action plan focuses on the highest-priority gaps.';
+    // Approved rule: actions for No answers in question order, then Partly / Unsure
+    // answers in question order; the first three are displayed.
+    const priorityOrder = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const noSet = [], partlySet = [];
+    priorityOrder.forEach(qi => { if (s.answers[qi] === 'no') noSet.push(qi); else if (s.answers[qi] === 'partly') partlySet.push(qi); });
+    const priorityActions = noSet.concat(partlySet).slice(0, 3).map((qi, r) => Object.assign({ rank: r + 1 }, this.actions[qi]));
+    return {
+      isHome: s.screen === 'home',
+      isAssessment: s.screen === 'assessment',
+      isReview: s.screen === 'review',
+      isResults: s.screen === 'results',
+      isPlan: s.screen === 'plan',
+      qNumber: s.qIndex + 1,
+      progressPct: ((s.qIndex + 1) / 10) * 100,
+      currentQuestion: this.questions[s.qIndex],
+      yesChecked: cur === 'yes', partlyChecked: cur === 'partly', noChecked: cur === 'no',
+      yesBorder: cur === 'yes' ? accentBorder : plainBorder,
+      partlyBorder: cur === 'partly' ? accentBorder : plainBorder,
+      noBorder: cur === 'no' ? accentBorder : plainBorder,
+      pickYes: () => this.setAnswer('yes'),
+      pickPartly: () => this.setAnswer('partly'),
+      pickNo: () => this.setAnswer('no'),
+      showValidation: s.showValidation,
+      startAssessment: () => this.go('assessment', { qIndex: 0 }),
+      goBack: () => {
+        if (s.qIndex === 0) this.go('home');
+        else this.setState({ qIndex: s.qIndex - 1, showValidation: false }, () => this.persist());
+      },
+      goContinue: () => {
+        if (cur === null) { this.setState({ showValidation: true }); return; }
+        if (s.qIndex === 9) this.go('review');
+        else this.setState({ qIndex: s.qIndex + 1, showValidation: false }, () => this.persist());
+      },
+      reviewRows: this.questions.map((text, i) => ({
+        num: i + 1, text,
+        answerLabel: this.answerLabel(s.answers[i]),
+        answerColor: s.answers[i] === null ? 'var(--color-accent-800)' : 'var(--color-neutral-800)',
+        edit: (e) => { e.preventDefault(); this.go('assessment', { qIndex: i }); }
+      })),
+      showReviewError: !!s.reviewError,
+      reviewErrorText: s.reviewError || '',
+      backToAssessment: () => this.go('assessment'),
+      calculate: () => {
+        const missing = s.answers.findIndex(a => a === null);
+        if (missing !== -1) {
+          this.setState({ reviewError: 'Complete all required questions before calculating the result. Question ' + (missing + 1) + ' requires an answer. Select Yes, Partly / Unsure, or No before continuing.' });
+          setTimeout(() => this.go('assessment', { qIndex: missing }), 1600);
+          return;
+        }
+        this.go('results');
+      },
+      hasResults: complete, noResults: !complete,
+      score, completedCount, yesCount, gapCount, summaryText,
+      calcDisabled: !complete,
+      strengths: s.answers.map((a, i) => ({ a, i })).filter(x => x.a === 'yes').map(x => ({ area: this.actions[x.i].area })),
+      attention: s.answers.map((a, i) => ({ a, i })).filter(x => x.a === 'no' || x.a === 'partly').map(x => ({ area: this.actions[x.i].area, answerLabel: this.answerLabel(x.a) })),
+      hasStrengths: s.answers.some(a => a === 'yes'),
+      noStrengths: !s.answers.some(a => a === 'yes'),
+      hasAttention: gapCount > 0,
+      noAttention: gapCount === 0,
+      viewPlan: () => this.go('plan'),
+      printResults: () => window.print(),
+      gapExplanations: this.questions.map((text, i) => ({ i, text })).filter(q => s.answers[q.i] === 'no' || s.answers[q.i] === 'partly').map(q => ({ num: q.i + 1, text: q.text, answerLabel: this.answerLabel(s.answers[q.i]), explain: this.actions[q.i].why, what: this.actions[q.i].title })),
+      goReview: () => this.go('review'),
+      priorityActions,
+      planTitle: priorityActions.length === 3 ? 'Your Three Priority Actions' : 'Your Priority Actions',
+      hasActions: priorityActions.length > 0,
+      noActions: complete && priorityActions.length === 0,
+      restart: () => this.go('home', { qIndex: 0, answers: Array(10).fill(null) }),
+      printPlan: () => window.print()
+    };
+  }
+}
+</script>
+</body>
+</html>
