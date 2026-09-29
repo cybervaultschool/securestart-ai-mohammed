@@ -1,2 +1,3 @@
 [build]
+  command = "node scripts/verify-site.mjs"
   publish = "site"
