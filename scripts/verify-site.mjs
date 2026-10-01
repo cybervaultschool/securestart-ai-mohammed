@@ -9,6 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const SOURCE = "SecureStart AI.dc.html"
 const SITE = "site/index.html"
 const FUNCTION = "netlify/functions/send-report.mjs"
+const AI_FUNCTION = "netlify/functions/ai-guidance.mjs"
 const DEPLOY_ONLY_MARKER = "Training deployment: Day 6"
 
 const failures = []
@@ -18,7 +19,7 @@ const check = (name, ok, detail = "") => {
 }
 const read = (path) => readFileSync(join(root, path), "utf8").replace(/\r\n/g, "\n")
 
-for (const path of [SOURCE, SITE, FUNCTION, "netlify.toml"]) check(`${path} exists`, existsSync(join(root, path)))
+for (const path of [SOURCE, SITE, FUNCTION, AI_FUNCTION, "netlify.toml"]) check(`${path} exists`, existsSync(join(root, path)))
 if (failures.length) process.exit(1)
 
 const source = read(SOURCE)
@@ -38,7 +39,7 @@ check(`${SITE} matches ${SOURCE} (apart from the deploy-only footer)`,
 for (const [name, text] of [[SOURCE, source], [SITE, site]]) {
   check(`${name} posts reports to /api/send-report`, text.includes("'/api/send-report'"))
   check(`${name} has the report email field`, text.includes('id="report-email"') && text.includes("Email My Report"))
-  check(`${name} has no browser-side provider call or key`, !/api\.resend\.com|emailjs|RESEND_API_KEY|re_[A-Za-z0-9]{16,}/i.test(text))
+  check(`${name} has no browser-side provider call or key`, !/api\.resend\.com|emailjs|RESEND_API_KEY|re_[A-Za-z0-9]{16,}|api\.anthropic\.com|ANTHROPIC_API_KEY|CLAUDE_MODEL|x-api-key/i.test(text))
   check(`${name} states that the report is sent to an email provider`, text.includes("securely sent to our email provider only for report delivery"))
 }
 
@@ -60,6 +61,23 @@ check("function rate limit is 3 requests / 60 s per ip + domain",
 // 5. No leftover email-provider code, and Netlify still publishes the site folder.
 check("no legacy email-provider code (Postmark / EmailJS)", ![source, site, fnSource].some((text) => /postmark|emailjs/i.test(text)))
 check('netlify.toml publishes "site"', /publish\s*=\s*"site"/.test(read("netlify.toml")))
+
+// 6. AI Advisor function: approved catalogue, route, rate limit, and a minimal footprint.
+const aiSource = read(AI_FUNCTION)
+const catalogue = JSON.parse(aiSource.match(/const APPROVED_CATALOGUE = (\[[\s\S]*?\n\])/)[1])
+check("AI Advisor catalogue equals the app's approved actions",
+  catalogue.length === 10 && JSON.stringify(catalogue.map(({ area, title, why, first }) => ({ area, title, why, first }))) === JSON.stringify(appActions))
+check("AI Advisor control ids are ten unique kebab-case ids",
+  new Set(catalogue.map((entry) => entry.id)).size === 10 && catalogue.every((entry) => /^[a-z]+(?:-[a-z]+)*$/.test(entry.id)))
+const aiConfig = (await import(pathToFileURL(join(root, AI_FUNCTION)).href)).config
+check("AI Advisor route is /api/ai-guidance", aiConfig?.path === "/api/ai-guidance")
+check("AI Advisor rate limit is 3 requests / 5 min per ip + domain",
+  aiConfig?.rateLimit?.windowLimit === 3 && aiConfig?.rateLimit?.windowSize === 300 &&
+  JSON.stringify(aiConfig?.rateLimit?.aggregateBy) === JSON.stringify(["ip", "domain"]))
+check("AI Advisor uses native fetch only (no import, SDK or beta header)", !/^\s*import\s|require\(|@anthropic-ai|anthropic-beta/m.test(aiSource))
+check("AI Advisor reads no client identity (only content-length; no IP or forwarding headers)",
+  [...aiSource.matchAll(/headers\.get\(\s*["']([^"']+)["']/g)].every((match) => match[1] === "content-length") &&
+  !/x-forwarded|x-nf-|context\.ip/i.test(aiSource))
 
 if (failures.length) {
   console.error(`\nverify-site: ${failures.length} check(s) failed`)
