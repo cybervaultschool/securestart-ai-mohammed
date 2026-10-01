@@ -23,7 +23,8 @@ No technical experience is required to complete the assessment.
    areas requiring attention from No and Partly / Unsure answers.
 5. **Action Plan** — the first three recommended actions, each with what to do,
    why it matters, the first practical step, and the related control area. The
-   visitor can also email themselves the report (see below).
+   visitor can also email themselves the report and, optionally, ask the AI Advisor
+   to explain the priorities (see below).
 
 Scoring: Yes = 2 points, Partly / Unsure = 1 point, No = 0 points (maximum 20).
 Recommendations follow a fixed approved mapping: actions for No answers first, then
@@ -81,6 +82,75 @@ Configuration (never commit these):
   variables).
 - The sending domain `securestart.defenssive.dev` must be verified in Resend.
 
+## AI Advisor (optional)
+
+On the Action Plan screen a visitor can choose **Business owner** or **IT
+administrator** and select **Generate AI Guidance**. Claude then writes a short
+plain-language explanation of the priorities that SecureStart has already chosen.
+
+**SecureStart stays authoritative.** The score, the strengths and gaps, and the
+three priority actions always come from the approved rules, never from AI, and the
+page is complete without the AI Advisor. The server recalculates everything from
+the answers. Claude can only return a `controlId` and an `explanation` for each
+priority. The server accepts the response only if the control IDs, their count and
+their order match its own selection, then attaches the approved title, area and
+first step itself. The page also rejects any response that disagrees with its own
+result. Model text is shown as plain text (never as HTML), and a field that contains
+markup, links or unexpected keys causes the whole response to be discarded.
+
+### Data boundaries
+
+- **Browser to the SecureStart Netlify Function.** `POST /api/ai-guidance` carries
+  exactly two things: the ten answers and the chosen audience. No name, company or
+  email address is collected or sent. The browser never calls Anthropic and never
+  sees the API key.
+- **Netlify Function to Claude.** Only a smaller, server-derived summary is sent:
+  the audience, the score, strength and gap identifiers, and the approved priority
+  actions. Claude never receives the raw request, a name, a company or an email
+  address.
+- The page tells the visitor this before they click, in the `ai-disclosure`
+  paragraph.
+- AI guidance is **not** included in the printed plan (the AI card is hidden when
+  printing) and **not** included in the emailed report (the `/api/send-report`
+  request contains no AI content, and that function accepts none).
+
+### The endpoint
+
+`/api/ai-guidance` is a Netlify Function (`netlify/functions/ai-guidance.mjs`). It
+calls the Claude Messages API with native `fetch` (no SDK or dependencies).
+
+Configuration (Site configuration → Environment variables; never commit values):
+
+| Variable | Value | Purpose |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | your key (secret) | Server-side only. Never in the page, responses, logs or Git. |
+| `CLAUDE_MODEL` | `claude-sonnet-5-5` | The model the function calls. |
+| `AI_ADVISOR_ENABLED` | `true` | Switch. Anything else (or a missing variable) disables the feature. |
+
+If any of these is missing, the function answers with the same generic
+"unavailable" message and the rest of the site keeps working.
+
+Behaviour and limits:
+- **8.5-second application timeout.** The function gives up on Claude after 8.5
+  seconds to keep the page responsive and the cost low. This is a deliberate
+  application setting, not a platform limit; Netlify's synchronous function limit
+  is 60 seconds.
+- **Rate limit.** 3 requests per 180 seconds, per IP address and domain, declared in
+  the function's `config`. Netlify only accepts windows of 10 to 180 seconds and
+  silently ignores others. Enforcement is **delayed**: it can take several seconds
+  to start, so a request just over the limit may still succeed. When the limit is
+  hit, Netlify returns HTTP 429 with an empty body and no `Retry-After` header; the
+  page checks the status before reading any body and shows a "wait about three
+  minutes" message.
+- **Zero gaps.** If every answer is Yes there is nothing to prioritise, so the page
+  makes no AI request and says no explanation is needed.
+- **Safe failures.** A refusal, provider 401 or 429, a timeout, malformed or invalid
+  output or a 5xx all produce one generic message. Provider text, stack traces and
+  keys are never returned or logged; the log records only a short category. The
+  score, actions, **Print Action Plan** and **Email My Report** stay usable.
+- Duplicate clicks send one request, and a response that arrives after the answers
+  change is ignored.
+
 ## Source of truth and deployment
 
 - `SecureStart AI.dc.html` is the **source** of the application.
@@ -94,21 +164,44 @@ cp "SecureStart AI.dc.html" site/index.html
 
 - Netlify runs `node scripts/verify-site.mjs` as its build command. The deploy
   **fails** if the deployed page differs from the source, if the email feature or
-  the privacy statement is missing, if the function's approved content no longer
-  matches the app, or if the route or rate limit changes. A copy or re-export
+  the privacy statement is missing, if the functions' approved content no longer
+  matches the app, if either route or rate limit changes, or if the AI Advisor
+  interface stops meeting its safety rules (plain-text rendering, no direct provider
+  call, exact disclosure, print exclusion). A copy or re-export
   therefore cannot silently remove the email feature.
 
 ## Checks
 
-Run both from the project folder (Node.js only, no installs):
+Run these from the project folder (Node.js only, no installs). The browser tests
+also need Microsoft Edge installed and an internet connection (the page loads React
+from a CDN). The APIs are mocked, so no test calls Anthropic or Resend, and none
+needs a real key.
+
+Build guard:
 
 ```bash
 node scripts/verify-site.mjs
 ```
 
+Browser (UI) tests, including the AI Advisor interface:
+
+```bash
+node scripts/test-ui.mjs
+```
+
+AI endpoint tests:
+
+```bash
+node scripts/test-ai-guidance.mjs
+```
+
+Email regression tests:
+
 ```bash
 node scripts/test-send-report.mjs
 ```
+
+Netlify runs only the build guard. Run the other three before every push.
 
 ## Current limitations
 
@@ -120,9 +213,12 @@ node scripts/test-send-report.mjs
 - **No login or user accounts.**
 - **No database.** Your assessment is calculated in your browser. If you choose
   Email My Report, your email address and assessment report are securely sent to
-  our email provider only for report delivery.
-- **No AI API integration.** Recommendations come from a fixed, human-written
-  mapping — no AI service is called.
+  our email provider only for report delivery. If you choose Generate AI Guidance,
+  your answers and audience are sent to the SecureStart service, which sends Claude
+  only a smaller summary (see AI Advisor above).
+- **AI is optional and never decides.** Recommendations come from a fixed,
+  human-written mapping. The AI Advisor only explains them, and the page works
+  without it. AI output can be generic or imperfect, so treat it as a starting point.
 
 ## Warning
 
