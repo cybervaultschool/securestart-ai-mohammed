@@ -214,6 +214,62 @@
           <p style="margin:0;line-height:1.65;max-width:56ch">You answered Yes to all ten questions, so no priority actions were identified. Continue maintaining these practices and repeat the assessment periodically.</p>
         </sc-if>
         <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)">Review these actions with an appropriate IT or security professional before implementation.</p>
+        <div class="card" data-no-print="true" data-section="ai-advisor" style="padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)">
+          <h2 id="ai-advisor-title" style="font-family:var(--font-heading);font-weight:500;font-size:22px;line-height:1.25;margin:0">AI Advisor</h2>
+          <sc-if value="{{ aiNoGaps }}" hint-placeholder-val="{{ false }}">
+            <p role="status" style="margin:0;font-size:14.5px;line-height:1.6;color:var(--color-accent-800);border-left:2px solid var(--color-accent);padding-left:12px">No priority explanation is needed. Your answers show no priority gaps, so there is nothing for AI Advisor to explain.</p>
+          </sc-if>
+          <sc-if value="{{ aiShowControls }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:var(--space-3)">
+              <p style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)">Optional. Your score and priority actions above come from SecureStart's approved rules, not from AI, and stay complete without it.</p>
+              <p id="ai-disclosure" style="margin:0;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)">Your ten assessment answers and selected audience are sent securely to the SecureStart service. Claude receives only your selected audience and a server-calculated summary of the result, including the score, strength and gap identifiers, and approved priority actions. Your name, company and email address are not sent to Claude.</p>
+              <div>
+                <div id="ai-audience-label" style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-neutral-700);margin-bottom:var(--space-2)">Explain for</div>
+                <div role="radiogroup" aria-labelledby="ai-audience-label" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-2)">
+                  <label class="radio" style="border:1px solid {{ aiOwnerBorder }};padding:12px 16px;border-radius:var(--radius-md)"><input type="radio" name="ai-audience" value="business-owner" checked="{{ aiOwnerChecked }}" disabled="{{ aiIsSending }}" onChange="{{ pickAiOwner }}"><span class="dot"></span>Business owner</label>
+                  <label class="radio" style="border:1px solid {{ aiAdminBorder }};padding:12px 16px;border-radius:var(--radius-md)"><input type="radio" name="ai-audience" value="it-admin" checked="{{ aiAdminChecked }}" disabled="{{ aiIsSending }}" onChange="{{ pickAiAdmin }}"><span class="dot"></span>IT administrator</label>
+                </div>
+              </div>
+              <div>
+                <button class="btn btn-primary" onClick="{{ generateAi }}" disabled="{{ aiIsSending }}">{{ aiButtonLabel }}</button>
+              </div>
+              <sc-if value="{{ aiIsIdle }}" hint-placeholder-val="{{ true }}">
+                <p role="status" style="margin:0;font-size:14.5px;color:var(--color-neutral-700)">AI guidance has not been requested yet. Your score and priority actions above are already complete.</p>
+              </sc-if>
+              <sc-if value="{{ aiIsSending }}" hint-placeholder-val="{{ false }}">
+                <p role="status" style="margin:0;font-size:14.5px;color:var(--color-neutral-700)">Generating AI guidance… This usually takes a few seconds.</p>
+              </sc-if>
+              <sc-if value="{{ aiIsRateLimited }}" hint-placeholder-val="{{ false }}">
+                <p role="status" style="margin:0;font-size:14.5px;line-height:1.6;color:var(--color-accent-800);border-left:2px solid var(--color-accent);padding-left:12px">AI Advisor has received a lot of requests and needs a short break. Please wait about three minutes, then try again. Your score and priority actions are not affected.</p>
+              </sc-if>
+              <sc-if value="{{ aiIsError }}" hint-placeholder-val="{{ false }}">
+                <p role="alert" style="margin:0;font-size:14.5px;line-height:1.6;color:var(--color-accent-800);border-left:2px solid var(--color-accent);padding-left:12px">AI Advisor is unavailable right now. Please try again later. Your score and priority actions are not affected.</p>
+              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ aiIsSuccess }}" hint-placeholder-val="{{ false }}">
+            <section aria-labelledby="ai-guidance-title" style="display:flex;flex-direction:column;gap:var(--space-3);border-top:1px solid var(--color-divider);padding-top:var(--space-4)">
+              <h3 id="ai-guidance-title" style="font-family:var(--font-heading);font-weight:500;font-size:20px;line-height:1.25;margin:0">AI Advisor Guidance</h3>
+              <p style="margin:0;font-size:13px;line-height:1.6;color:var(--color-neutral-700)"><span class="tag tag-outline">AI-generated</span> Written for: {{ aiAudienceLabel }}. Action titles, areas and first steps come from SecureStart's approved action plan. Only the summary and explanations are written by AI.</p>
+              <p style="margin:0;font-size:15px;line-height:1.6">{{ aiSummary }}</p>
+              <sc-if value="{{ aiHasPositive }}" hint-placeholder-val="{{ false }}">
+                <p style="margin:0;font-size:15px;line-height:1.6">{{ aiPositive }}</p>
+              </sc-if>
+              <sc-for list="{{ aiPriorities }}" as="ap" hint-placeholder-count="3">
+                <div style="border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)">
+                  <div style="display:flex;align-items:center;gap:var(--space-3);justify-content:space-between;flex-wrap:wrap">
+                    <span style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-700);font-feature-settings:'tnum'">Priority {{ ap.rank }}</span>
+                    <span class="tag tag-outline">{{ ap.area }}</span>
+                  </div>
+                  <div style="font-family:var(--font-heading);font-weight:500;font-size:20px;line-height:1.25">{{ ap.title }}</div>
+                  <div style="font-size:15px;line-height:1.6"><span style="font-style:italic;color:var(--color-neutral-700)">AI explanation — </span>{{ ap.explanation }}</div>
+                  <div style="font-size:15px;line-height:1.6"><span style="font-style:italic;color:var(--color-neutral-700)">First practical step (approved) — </span>{{ ap.firstStep }}</div>
+                </div>
+              </sc-for>
+              <div style="border-left:2px solid var(--color-accent);padding-left:12px;font-size:13.5px;line-height:1.65;color:var(--color-neutral-700)"><strong>Limitations — </strong>{{ aiLimitations }}</div>
+            </section>
+          </sc-if>
+        </div>
         <div class="card" data-no-print="true" style="padding:var(--space-5);display:flex;flex-direction:column;gap:var(--space-3)">
           <div style="font-family:var(--font-heading);font-weight:500;font-size:22px;line-height:1.25">Email my report</div>
           <div class="field">
@@ -240,7 +296,7 @@
         <div data-no-print="true" style="display:flex;gap:var(--space-3);flex-wrap:wrap;border-top:1px solid var(--color-divider);padding-top:var(--space-4)">
           <button class="btn btn-secondary" onClick="{{ goReview }}">Review My Answers</button>
           <button class="btn btn-secondary" onClick="{{ restart }}">Start a New Assessment</button>
-          <button class="btn btn-primary" onClick="{{ printPlan }}">Print Action Plan</button>
+          <button class="btn btn-secondary" onClick="{{ printPlan }}">Print Action Plan</button>
         </div>
       </section>
     </sc-if>
@@ -262,8 +318,13 @@ class Component extends DCLogic {
       showValidation: false,
       reviewError: null,
       email: '',
-      emailStatus: 'idle'
+      emailStatus: 'idle',
+      aiAudience: 'business-owner',
+      aiStatus: 'idle',
+      aiResult: null
     };
+    this.aiBusy = false;
+    this.aiToken = 0;
     this.questions = [
       'Is multi-factor authentication required for email and administrator accounts?',
       'Does each person use a unique password stored in an approved password manager?',
@@ -296,9 +357,26 @@ class Component extends DCLogic {
   setAnswer(val) {
     const answers = this.state.answers.slice();
     answers[this.state.qIndex] = val;
-    this.setState({ answers, showValidation: false }, () => this.persist());
+    this.aiToken++; this.aiBusy = false;
+    this.setState({ answers, showValidation: false, aiStatus: 'idle', aiResult: null }, () => this.persist());
   }
   answerLabel(v) { return v === 'yes' ? 'Yes' : v === 'partly' ? 'Partly / Unsure' : v === 'no' ? 'No' : 'Not answered'; }
+  // Accepts an AI Advisor response only if it agrees with this page's own deterministic result.
+  // Titles, areas and first steps are server data and must equal the local approved actions;
+  // only the summary, positive finding, explanations and limitations are AI-written text.
+  checkAdvisor(j, score, expected, audience) {
+    const isText = (v) => typeof v === 'string';
+    if (!j || j.ok !== true || j.aiGenerated !== true || j.score !== score || j.maxScore !== 20) return null;
+    const a = j.advisor;
+    if (!a || !isText(a.summary) || !isText(a.positiveFinding) || !isText(a.limitations) || !Array.isArray(a.priorities) || a.priorities.length !== expected.length) return null;
+    const priorities = [];
+    for (let i = 0; i < expected.length; i++) {
+      const p = a.priorities[i];
+      if (!p || !isText(p.explanation) || p.title !== expected[i].title || p.area !== expected[i].area || p.firstStep !== expected[i].first) return null;
+      priorities.push({ rank: i + 1, title: p.title, area: p.area, explanation: p.explanation, firstStep: p.firstStep });
+    }
+    return { audienceLabel: audience === 'it-admin' ? 'IT administrator' : 'Business owner', summary: a.summary, positiveFinding: a.positiveFinding, priorities, limitations: a.limitations };
+  }
   renderVals() {
     const s = this.state;
     const complete = s.answers.every(a => a !== null);
@@ -383,7 +461,10 @@ class Component extends DCLogic {
       planTitle: priorityActions.length === 3 ? 'Your Three Priority Actions' : 'Your Priority Actions',
       hasActions: priorityActions.length > 0,
       noActions: complete && priorityActions.length === 0,
-      restart: () => this.go('home', { qIndex: 0, answers: Array(10).fill(null), email: '', emailStatus: 'idle' }),
+      restart: () => {
+        this.aiToken++; this.aiBusy = false;
+        this.go('home', { qIndex: 0, answers: Array(10).fill(null), email: '', emailStatus: 'idle', aiAudience: 'business-owner', aiStatus: 'idle', aiResult: null });
+      },
       emailValue: s.email,
       emailIsSending: s.emailStatus === 'sending',
       emailIsSuccess: s.emailStatus === 'success',
@@ -408,6 +489,50 @@ class Component extends DCLogic {
           .then(res => res.json().then(j => !!(res.ok && j && j.ok), () => false))
           .then(ok => this.setState({ emailStatus: ok ? 'success' : 'error' }))
           .catch(() => this.setState({ emailStatus: 'error' }));
+      },
+      aiOwnerChecked: s.aiAudience === 'business-owner',
+      aiAdminChecked: s.aiAudience === 'it-admin',
+      aiOwnerBorder: s.aiAudience === 'business-owner' ? accentBorder : plainBorder,
+      aiAdminBorder: s.aiAudience === 'it-admin' ? accentBorder : plainBorder,
+      pickAiOwner: () => this.setState({ aiAudience: 'business-owner' }),
+      pickAiAdmin: () => this.setState({ aiAudience: 'it-admin' }),
+      aiNoGaps: complete && priorityActions.length === 0,
+      aiShowControls: priorityActions.length > 0,
+      aiIsIdle: s.aiStatus === 'idle',
+      aiIsSending: s.aiStatus === 'sending',
+      aiIsSuccess: s.aiStatus === 'success' && !!s.aiResult,
+      aiIsRateLimited: s.aiStatus === 'ratelimited',
+      aiIsError: s.aiStatus === 'error',
+      aiButtonLabel: s.aiStatus === 'sending' ? 'Generating…' : 'Generate AI Guidance',
+      aiAudienceLabel: s.aiResult ? s.aiResult.audienceLabel : '',
+      aiSummary: s.aiResult ? s.aiResult.summary : '',
+      aiPositive: s.aiResult ? s.aiResult.positiveFinding : '',
+      aiHasPositive: !!(s.aiResult && s.aiResult.positiveFinding.length > 0),
+      aiPriorities: s.aiResult ? s.aiResult.priorities : [],
+      aiLimitations: s.aiResult ? s.aiResult.limitations : '',
+      generateAi: () => {
+        if (this.aiBusy || s.aiStatus === 'sending') return;
+        if (priorityActions.length === 0) return;
+        if (!complete) { this.setState({ aiStatus: 'error', aiResult: null }); return; }
+        this.aiBusy = true;
+        const token = ++this.aiToken;
+        const audience = s.aiAudience;
+        const expected = priorityActions.map(a => ({ title: a.title, area: a.area, first: a.first }));
+        this.setState({ aiStatus: 'sending', aiResult: null });
+        fetch('/api/ai-guidance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ answers: s.answers, audience }) })
+          .then(res => {
+            if (res.status === 429) return { kind: 'ratelimited' };
+            if (!res.ok) return { kind: 'error' };
+            return res.json().then(j => ({ kind: 'json', j }), () => ({ kind: 'error' }));
+          })
+          .then(out => {
+            if (token !== this.aiToken) return;
+            if (out.kind === 'ratelimited') { this.setState({ aiStatus: 'ratelimited', aiResult: null }); return; }
+            const result = out.kind === 'json' ? this.checkAdvisor(out.j, score, expected, audience) : null;
+            this.setState(result ? { aiStatus: 'success', aiResult: result } : { aiStatus: 'error', aiResult: null });
+          })
+          .catch(() => { if (token === this.aiToken) this.setState({ aiStatus: 'error', aiResult: null }); })
+          .then(() => { if (token === this.aiToken) this.aiBusy = false; });
       },
       printPlan: () => window.print()
     };
