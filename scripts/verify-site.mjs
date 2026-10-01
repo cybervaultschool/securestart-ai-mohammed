@@ -71,8 +71,8 @@ check("AI Advisor control ids are ten unique kebab-case ids",
   new Set(catalogue.map((entry) => entry.id)).size === 10 && catalogue.every((entry) => /^[a-z]+(?:-[a-z]+)*$/.test(entry.id)))
 const aiConfig = (await import(pathToFileURL(join(root, AI_FUNCTION)).href)).config
 check("AI Advisor route is /api/ai-guidance", aiConfig?.path === "/api/ai-guidance")
-check("AI Advisor rate limit is 3 requests / 5 min per ip + domain",
-  aiConfig?.rateLimit?.windowLimit === 3 && aiConfig?.rateLimit?.windowSize === 300 &&
+check("AI Advisor rate limit is 3 requests / 180 s per ip + domain (Netlify ignores windows outside 10-180 s)",
+  aiConfig?.rateLimit?.windowLimit === 3 && aiConfig?.rateLimit?.windowSize === 180 &&
   JSON.stringify(aiConfig?.rateLimit?.aggregateBy) === JSON.stringify(["ip", "domain"]))
 check("AI Advisor uses native fetch only (no import, SDK or beta header)", !/^\s*import\s|require\(|@anthropic-ai|anthropic-beta/m.test(aiSource))
 check("AI Advisor reads no client identity (only content-length; no IP or forwarding headers)",

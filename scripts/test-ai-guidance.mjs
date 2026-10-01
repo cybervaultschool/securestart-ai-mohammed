@@ -502,8 +502,8 @@ await catchAllCase("exception at the handler boundary", {
 
 // --- configuration and secrets -------------------------------------------------------------------------
 check("route is /api/ai-guidance", config.path === "/api/ai-guidance")
-check("rate limit is 3 requests per 5 minutes, by ip and domain",
-  config.rateLimit?.windowLimit === 3 && config.rateLimit?.windowSize === 300 && JSON.stringify(config.rateLimit?.aggregateBy) === '["ip","domain"]')
+check("rate limit is 3 requests per 180 seconds, by ip and domain",
+  config.rateLimit?.windowLimit === 3 && config.rateLimit?.windowSize === 180 && JSON.stringify(config.rateLimit?.aggregateBy) === '["ip","domain"]')
 check("the key never appears in any log line", !logged.join("\n").includes(DUMMY_KEY))
 check("no exception detail or provider text appears in any log line", ![SECRET_DETAIL, PROVIDER_SECRET].some((value) => logged.join("\n").includes(value)))
 check("the catch-all fired only for the 3 deliberately triggered exceptions (no validator bug is hiding behind it)",

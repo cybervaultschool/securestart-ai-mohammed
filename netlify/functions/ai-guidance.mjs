@@ -276,11 +276,12 @@ export default async (request) => {
   }
 }
 
+// Netlify only accepts a rate-limit window of 10 to 180 seconds and silently ignores anything else.
 export const config = {
   path: "/api/ai-guidance",
   rateLimit: {
     windowLimit: 3,
-    windowSize: 300,
+    windowSize: 180,
     aggregateBy: ["ip", "domain"]
   }
 }
