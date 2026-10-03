@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy Notice | Defenssive Security Self-Assessment</title>
+  <meta name="description" content="What the Defenssive Security Self-Assessment collects, who processes it, and how to contact us about your data.">
+  <link rel="canonical" href="https://assessment.defenssive.dev/privacy">
+  <meta name="theme-color" content="#0a0f1a">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="preload" href="/assets/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+  <header class="site-header" data-no-print="true">
+    <div class="bar">
+      <a class="brand" href="https://defenssive.com"><img src="/assets/defenssive-logo-white.png" width="1920" height="281" alt="Defenssive"></a>
+      <a class="back-link" href="https://defenssive.com">Back to defenssive.com</a>
+    </div>
+  </header>
+  <main id="main" tabindex="-1">
+    <div class="stack">
+      <p class="eyebrow">Privacy notice</p>
+      <h1>How the self-assessment handles your information</h1>
+      <p class="lead">This tool is run by Defenssive Cybersecurity LLC. We keep it simple: we collect only what the tool needs, and we do not sell data.</p>
+      <p class="note">Items marked <strong>[OWNER TO CONFIRM]</strong> are facts the site owner still has to confirm before this notice is final.</p>
+
+      <section class="stack-sm" aria-labelledby="p-collect">
+        <h2 id="p-collect">What is collected</h2>
+        <ul>
+          <li><strong>Your answers.</strong> They are kept in your own browser (local storage) so you can continue later. They stay there until you choose to email the report or generate AI guidance, or until you use "Clear my answers" or "Start a new assessment".</li>
+          <li><strong>Your email address.</strong> Only if you ask for the report by email. It is used to send that one report.</li>
+          <li><strong>No name or company.</strong> The tool does not ask for them.</li>
+          <li><strong>No accounts, no advertising or analytics trackers.</strong></li>
+        </ul>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-email">
+        <h2 id="p-email">If you email the report</h2>
+        <p>Your email address and your answers are sent to our server. The server rebuilds the report from your answers and sends it through our email provider, Resend. A Cloudflare Turnstile check helps block automated abuse.</p>
+        <p>To limit abuse we keep short-lived counters. They use a one-way hash of the network (IP) address and of the email address, not the address itself. They count requests per hour (per network address) and per day (per email address). The hashed counters are not used for anything else. Exact retention: <strong>[OWNER TO CONFIRM]</strong>.</p>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-ai">
+        <h2 id="p-ai">If you generate AI guidance</h2>
+        <p>"Generate AI Guidance" sends your answers and the audience you choose (business owner or IT administrator) to our server. Our server then sends the AI service a smaller summary: the audience, your score, which areas you answered Yes or not-Yes, and the approved priority actions. The AI service is <strong>Anthropic (Claude)</strong>.</p>
+        <p>Your email address, name and company are never sent to the AI service. The AI only writes the explanation text. Your score and priority actions always come from our own approved rules. AI guidance is not included in printouts or emailed reports.</p>
+        <p>How long Anthropic keeps this data depends on our agreement with them: <strong>[OWNER TO CONFIRM]</strong>.</p>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-keep">
+        <h2 id="p-keep">How long we keep things on our servers</h2>
+        <p>The report and the AI guidance are generated for the request and are not stored by this tool. Our hosting provider (Netlify) keeps standard server logs. Retention period for those logs: <strong>[OWNER TO CONFIRM]</strong>. Retention period for the hashed abuse counters: <strong>[OWNER TO CONFIRM]</strong>.</p>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-sell">
+        <h2 id="p-sell">Selling and sharing</h2>
+        <p>We do not sell your data. It is shared only with the service providers named above (Netlify for hosting, Resend for email, Cloudflare for the bot check, Anthropic for AI guidance) so the tool can work.</p>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-limits">
+        <h2 id="p-limits">What this tool is not</h2>
+        <p>It gives educational guidance based only on your answers. It does not inspect your systems or replace a professional security assessment. Please do not enter passwords, credentials, customer records or other confidential information anywhere.</p>
+      </section>
+
+      <section class="stack-sm" aria-labelledby="p-contact">
+        <h2 id="p-contact">Contact</h2>
+        <p>Questions, or want your data removed? Email <a href="mailto:contact@defenssive.com">contact@defenssive.com</a>.</p>
+      </section>
+
+      <p><a class="btn btn-secondary" href="/">Back to the self-assessment</a></p>
+    </div>
+  </main>
+  <footer class="site-footer" data-no-print="true">
+    <div class="bar">
+      <small>© Defenssive Cybersecurity LLC</small>
+      <nav class="links" aria-label="Footer">
+        <a href="https://defenssive.com">defenssive.com</a>
+        <a href="/privacy">Privacy notice</a>
+        <a href="https://app.defenssive.dev/terms">Terms</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

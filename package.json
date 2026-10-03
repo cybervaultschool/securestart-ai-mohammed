@@ -1,0 +1,12 @@
+{
+  "name": "defenssive-security-self-assessment",
+  "private": true,
+  "type": "module",
+  "description": "Defenssive Security Self-Assessment: static site plus two Netlify Functions.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@netlify/blobs": "11.1.3"
+  }
+}

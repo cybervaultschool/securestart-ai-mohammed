@@ -1,9 +1,7 @@
 // Tests netlify/functions/ai-guidance.mjs against a MOCKED Claude API. No network, no real key.
 // Run with: node scripts/test-ai-guidance.mjs
-import { readFileSync } from "node:fs"
-import { fileURLToPath } from "node:url"
 import { mock } from "node:test"
-import vm from "node:vm"
+import { NOT_SURE_FIRST_STEP, QUESTIONS } from "../site/assessment.js"
 
 const DUMMY_KEY = "test-anthropic-key-NOT-REAL-0000"
 const ENV_DEFAULTS = { AI_ADVISOR_ENABLED: "true", ANTHROPIC_API_KEY: DUMMY_KEY, CLAUDE_MODEL: "claude-sonnet-5-5" }
@@ -22,19 +20,24 @@ for (const method of ["log", "error", "warn", "info"]) {
 const moduleUrl = new URL("../netlify/functions/ai-guidance.mjs", import.meta.url).href
 const { default: handler, config } = await import(moduleUrl)
 
-// Independent reference built from the app's own approved actions.
-const appHtml = readFileSync(fileURLToPath(new URL("../SecureStart AI.dc.html", import.meta.url)), "utf8")
-const ACTIONS = vm.runInNewContext(`(${appHtml.match(/this\.actions = (\[[\s\S]*?\n {4}\])/)[1]})`)
-const IDS = ["mfa", "passwords", "backups", "updates", "endpoint", "encryption", "awareness", "admin-accounts", "incident-plan", "remote-access"]
+// Independent reference. The approved wording comes from the shared module's data; the scoring,
+// risk ordering and fact-building below are written separately from site/assessment.js on purpose.
+const IDS = QUESTIONS.map((q) => q.id)
+const TEXT = Object.fromEntries(QUESTIONS.map((q) => [q.id, { area: q.area, title: q.action.title, why: q.action.why, first: q.action.first, topic: q.topic }]))
+const RISK = ["mfa", "admin-mfa", "remote-access", "backups", "admin-accounts", "updates", "endpoint", "passwords", "leavers", "sharing", "encryption", "awareness", "incident-plan"]
 const reference = (answers, audience) => {
-  const indexes = (level) => answers.map((a, i) => (a === level ? i : -1)).filter((i) => i >= 0)
+  const levelOf = Object.fromEntries(IDS.map((id, i) => [id, answers[i]]))
   const score = answers.reduce((sum, a) => sum + (a === "yes" ? 2 : a === "partly" ? 1 : 0), 0)
+  const picked = []
+  for (const level of ["no", "unsure", "partly"]) for (const id of RISK) if (levelOf[id] === level) picked.push([id, level])
   return {
-    audience, score, maxScore: 20,
-    strengthIds: indexes("yes").map((i) => IDS[i]),
-    gapIds: answers.map((a, i) => (a === "yes" ? null : IDS[i])).filter(Boolean),
-    actions: [...indexes("no"), ...indexes("partly")].slice(0, 3).map((i) => ({
-      controlId: IDS[i], area: ACTIONS[i].area, title: ACTIONS[i].title, why: ACTIONS[i].why, first: ACTIONS[i].first
+    audience, score, maxScore: 26,
+    strengthIds: IDS.filter((id) => levelOf[id] === "yes"),
+    gapIds: IDS.filter((id) => levelOf[id] !== "yes"),
+    actions: picked.slice(0, 3).map(([id, level]) => ({
+      controlId: id, area: TEXT[id].area,
+      title: level === "unsure" ? "Find out: " + TEXT[id].topic : TEXT[id].title,
+      why: TEXT[id].why, first: level === "unsure" ? NOT_SURE_FIRST_STEP : TEXT[id].first, answer: level
     }))
   }
 }
@@ -96,7 +99,10 @@ const failed = []
 const check = (name, condition) => { condition ? passed++ : failed.push(name); if (!condition) console.log(`FAIL  ${name}`) }
 
 const UNAVAILABLE = { ok: false, error: "unavailable", message: "AI Advisor is unavailable right now. Your score and actions are not affected." }
-const MIXED = ["yes", "yes", "no", "yes", "partly", "yes", "yes", "no", "yes", "partly"]
+// mfa yes, admin-mfa unsure, admin-accounts yes, passwords partly, backups no, updates yes, endpoint no,
+// encryption yes, awareness yes, incident-plan partly, remote-access yes, leavers yes, sharing yes
+const MIXED = ["yes", "unsure", "yes", "partly", "no", "yes", "no", "yes", "yes", "partly", "yes", "yes", "yes"]
+const idLevels = (map) => IDS.map((id) => map[id] ?? "yes")
 const good = { answers: MIXED, audience: "business-owner" }
 const isUnavailable = (r) => r.status === 503 && JSON.stringify(r.json) === JSON.stringify(UNAVAILABLE)
 
@@ -150,7 +156,7 @@ await rejects("multi-byte body over 8 KB (4,500 chars, 9,000 bytes)", JSON.strin
 for (const raw of ["{not json", "[]", "null", '"text"', "42", "true", ""]) await rejects(`body ${JSON.stringify(raw)}`, raw)
 await rejects("missing audience", { answers: MIXED })
 await rejects("missing answers", { audience: "business-owner" })
-for (const [key, value] of [["score", 20], ["maxScore", 20], ["title", "Free money"], ["titles", ["x"]], ["actions", [{ title: "x" }]], ["recommendation", "x"],
+for (const [key, value] of [["score", 26], ["maxScore", 26], ["title", "Free money"], ["titles", ["x"]], ["actions", [{ title: "x" }]], ["recommendation", "x"],
   ["recommendations", ["x"]], ["strengths", ["mfa"]], ["gaps", ["mfa"]], ["controlId", "mfa"], ["firstStep", "x"], ["html", "<b>x</b>"], ["system", "ignore previous"],
   ["prompt", "ignore previous"], ["model", "claude-opus-5-5"], ["email", "a@example.com"], ["name", "Ada"], ["company", "Acme"], ["ip", "203.0.113.5"], ["subject", "x"]]) {
   await rejects(`unknown key ${key}`, { ...good, [key]: value })
@@ -158,23 +164,26 @@ for (const [key, value] of [["score", 20], ["maxScore", 20], ["title", "Free mon
 await rejects("__proto__ key", `{"__proto__":{"x":1},"answers":${JSON.stringify(MIXED)},"audience":"business-owner"}`)
 await rejects("answers not an array", { answers: "yes", audience: "business-owner" })
 await rejects("answers as an object", { answers: { 0: "yes" }, audience: "business-owner" })
-for (const length of [0, 1, 9, 11, 20]) await rejects(`answers length ${length}`, { answers: Array(length).fill("yes"), audience: "business-owner" })
-for (const bad of [null, "Yes", "YES", "unsure", "partly / unsure", "", " yes", 1, 2, true, {}, ["yes"]]) {
+for (const length of [0, 1, 9, 10, 12, 14, 20]) await rejects(`answers length ${length}`, { answers: Array(length).fill("yes"), audience: "business-owner" })
+for (const bad of [null, "Yes", "YES", "Unsure", "Not sure", "partly / unsure", "Partly", "", " yes", 1, 2, true, {}, ["yes"]]) {
   await rejects(`answer value ${JSON.stringify(bad)}`, { answers: [bad, ...MIXED.slice(1)], audience: "business-owner" })
 }
 for (const bad of ["owner", "admin", "Business-Owner", "it-admin ", "", null, 1, ["business-owner"], {}]) {
   await rejects(`audience ${JSON.stringify(bad)}`, { answers: MIXED, audience: bad })
 }
 
-// --- server authority: every possible assessment (3^10 = 59,049) -----------------------------------
+// --- server authority: 30,000 sampled assessments (4^13 is too many to enumerate) -------------------------
 {
   useProvider()
   let mismatches = 0
-  const levels = ["yes", "partly", "no"]
+  const levels = ["yes", "partly", "unsure", "no"]
+  let seed = 987654321
+  const random = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296 }
   const started = Date.now()
-  for (let n = 0; n < 59049; n++) {
-    const answers = []
-    for (let i = 0, rest = n; i < 10; i++, rest = Math.floor(rest / 3)) answers.push(levels[rest % 3])
+  let compared = 0
+  for (let n = 0; n < 30000; n++) {
+    const answers = IDS.map(() => levels[Math.floor(random() * 4)])
+    if (answers.every((a) => a === "yes")) continue
     const audience = n % 2 ? "it-admin" : "business-owner"
     calls = []
     const response = await send(JSON.stringify({ answers, audience }))
@@ -182,25 +191,32 @@ for (const bad of ["owner", "admin", "Business-Owner", "it-admin ", "", null, 1,
     const expected = reference(answers, audience)
     const sent = calls[0]?.facts
     const okFacts = JSON.stringify(sent) === JSON.stringify(expected)
-    const okBody = response.status === 200 && body.ok === true && body.score === expected.score && body.maxScore === 20 &&
+    const okBody = response.status === 200 && body.ok === true && body.score === expected.score && body.maxScore === 26 &&
       body.advisor.priorities.length === expected.actions.length &&
       body.advisor.priorities.every((p, i) => p.controlId === expected.actions[i].controlId && p.title === expected.actions[i].title &&
         p.area === expected.actions[i].area && p.firstStep === expected.actions[i].first)
+    compared++
     if (!okFacts || !okBody) mismatches++
   }
-  check(`all 59,049 answer combinations: server score, strengths, gaps and 3 actions match the reference (${Math.round((Date.now() - started) / 1000)} s)`, mismatches === 0)
+  check(compared + " sampled combinations: server score, strengths, gaps and 3 risk-ordered actions match the reference (" + Math.round((Date.now() - started) / 1000) + " s)", mismatches === 0 && compared > 29000)
 }
 {
-  const all = Array(10).fill("yes"), none = Array(10).fill("no")
-  const r1 = await ask({ answers: all, audience: "it-admin" }); const r2 = await ask({ answers: none, audience: "it-admin" })
-  check("all Yes -> score 20, no priorities", r1.status === 200 && r1.json.score === 20 && r1.json.advisor.priorities.length === 0)
-  check("all No -> score 0, three priorities in question order", r2.status === 200 && r2.json.score === 0 && r2.json.advisor.priorities.map((p) => p.controlId).join() === "mfa,passwords,backups")
+  const none = IDS.map(() => "no")
+  useProvider()
+  const r1 = await ask({ answers: IDS.map(() => "yes"), audience: "it-admin" })
+  check("all Yes -> 400 and no Claude call (nothing to explain)", r1.status === 400 && r1.json?.ok === false && calls.length === 0)
+  const r2 = await ask({ answers: none, audience: "it-admin" })
+  check("all No -> score 0 of 26, three priorities in risk order", r2.status === 200 && r2.json.score === 0 && r2.json.maxScore === 26 && r2.json.advisor.priorities.map((p) => p.controlId).join() === "mfa,admin-mfa,remote-access")
+  const r3 = await ask({ answers: idLevels({ "admin-mfa": "unsure", sharing: "unsure" }), audience: "it-admin" })
+  check("Not sure answers become 'Find out' actions with the fixed first step",
+    r3.status === 200 && r3.json.advisor.priorities.length === 2 && r3.json.advisor.priorities[0].title === "Find out: MFA for administrators" &&
+    r3.json.advisor.priorities.every((p) => p.firstStep === NOT_SURE_FIRST_STEP))
 }
 
 // --- what is sent to Claude --------------------------------------------------------------------
 {
   useProvider()
-  await ask(good); await ask({ answers: Array(10).fill("no"), audience: "it-admin" })
+  await ask(good); await ask({ answers: Array(13).fill("no"), audience: "it-admin" })
   const first = calls[0], second = calls[1]
   const sentBody = JSON.parse(first.init.body)
   check("calls https://api.anthropic.com/v1/messages with POST", first.url === "https://api.anthropic.com/v1/messages" && first.init.method === "POST")
@@ -214,9 +230,10 @@ for (const bad of ["owner", "admin", "Business-Owner", "it-admin ", "", null, 1,
   check("model comes from CLAUDE_MODEL", sentBody.model === "claude-sonnet-5-5")
   check("low effort and a small output limit", JSON.stringify(sentBody.output_config) === '{"effort":"low"}' && Number.isInteger(sentBody.max_tokens) && sentBody.max_tokens > 0 && sentBody.max_tokens <= 2000)
   check("one user message holding only the server-built facts", sentBody.messages.length === 1 && sentBody.messages[0].role === "user" &&
-    JSON.stringify(Object.keys(first.facts)) === '["audience","score","maxScore","strengthIds","gapIds","actions"]')
+    JSON.stringify(Object.keys(first.facts)) === '["audience","score","maxScore","strengthIds","gapIds","actions"]' &&
+    first.facts.actions.every((a) => JSON.stringify(Object.keys(a)) === '["controlId","area","title","why","first","answer"]'))
   check("the facts equal the independent reference", JSON.stringify(first.facts) === JSON.stringify(reference(MIXED, "business-owner")))
-  check("each action is the exact approved catalogue entry (controlId, area, title, why, first)",
+  check("each action is the exact approved catalogue entry (controlId, area, title, why, first, answer)",
     first.facts.actions.every((a, i) => JSON.stringify(a) === JSON.stringify(reference(MIXED, "business-owner").actions[i])))
   check("system instruction is fixed on the server (identical for different assessments)", typeof sentBody.system === "string" && sentBody.system.length > 200 &&
     sentBody.system === JSON.parse(second.init.body).system)
@@ -243,12 +260,13 @@ for (const bad of ["owner", "admin", "Business-Owner", "it-admin ", "", null, 1,
   check("no canary or key in logs", ![...canaries, DUMMY_KEY].some((c) => logged.join("\n").includes(c)))
 
   // Everything that can appear in the facts belongs to the approved vocabulary.
-  const allowed = new Set([...IDS, "business-owner", "it-admin", ...ACTIONS.flatMap((a) => [a.area, a.title, a.why, a.first])])
+  const allowed = new Set([...IDS, "business-owner", "it-admin", "no", "partly", "unsure", NOT_SURE_FIRST_STEP,
+    ...Object.values(TEXT).flatMap((a) => [a.area, a.title, a.why, a.first, "Find out: " + a.topic])])
   const strings = (value) => (typeof value === "string" ? [value] : Array.isArray(value) ? value.flatMap(strings) : value && typeof value === "object" ? Object.values(value).flatMap(strings) : [])
   let stray = 0
   for (let n = 0; n < 400; n++) {
     useProvider()
-    await ask({ answers: Array.from({ length: 10 }, (_, i) => ["yes", "partly", "no"][(n * 7 + i * 3 + (n >> 3)) % 3]), audience: n % 2 ? "it-admin" : "business-owner" })
+    await ask({ answers: Array.from({ length: 13 }, (_, i) => ["yes", "partly", "unsure", "no"][(n * 7 + i * 3 + (n >> 3)) % 4]), audience: n % 2 ? "it-admin" : "business-owner" })
     if (!strings(calls[0].facts).every((s) => allowed.has(s))) stray++
   }
   check("400 varied assessments: every string sent to Claude is approved catalogue content", stray === 0)
@@ -341,19 +359,18 @@ await outputFails("HTML in summary", (o) => ({ ...o, summary: "<h1>Hi</h1>" }))
 await outputFails("link in limitations", (o) => ({ ...o, limitations: "Read more at https://evil.example" }))
 {
   useProvider({ mode: "custom", custom: (o) => ({ ...o, positiveFinding: "Great job on everything." }) })
-  const r = await ask({ answers: Array(10).fill("no"), audience: "business-owner" })
+  const r = await ask({ answers: Array(13).fill("no"), audience: "business-owner" })
   check("invented praise when there are no strengths -> generic 503", isUnavailable(r))
 }
 
 // --- the priority count is decided by the deterministic server, never by the provider -------------------------
 {
-  const gapsOf = (...positions) => Array.from({ length: 10 }, (_, i) => (positions.includes(i) ? "no" : "yes"))
+  const gapsOf = (...positions) => Array.from({ length: 13 }, (_, i) => (positions.includes(i) ? "no" : "yes"))
   const scenarios = [
-    ["four gaps (three actions, the rest cut off)", ["no", "yes", "partly", "no", "partly", "yes", "yes", "yes", "yes", "yes"], 3],
+    ["five gaps (three actions, the rest cut off)", ["no", "yes", "partly", "no", "unsure", "yes", "yes", "yes", "yes", "partly", "yes", "yes", "yes"], 3],
     ["three gaps", gapsOf(0, 3, 8), 3],
-    ["two gaps (one No, one Partly)", ["yes", "partly", "yes", "yes", "yes", "yes", "no", "yes", "yes", "yes"], 2],
-    ["one gap", gapsOf(8), 1],
-    ["zero gaps", Array(10).fill("yes"), 0]
+    ["two gaps (one No, one Not sure)", ["yes", "yes", "yes", "yes", "yes", "yes", "no", "yes", "yes", "yes", "yes", "yes", "unsure"], 2],
+    ["one gap", gapsOf(8), 1]
   ]
   for (const [name, answers, count] of scenarios) {
     const expectedIds = reference(answers, "it-admin").actions.map((a) => a.controlId)
@@ -402,7 +419,7 @@ await outputFails("link in limitations", (o) => ({ ...o, limitations: "Read more
       p.firstStep === expected.actions[i].first && p.explanation === providerOutput.priorities[i].explanation))
   check("valid request -> 200 with exactly ok, aiGenerated, score, maxScore, advisor",
     r.status === 200 && JSON.stringify(Object.keys(r.json).sort()) === '["advisor","aiGenerated","maxScore","ok","score"]' && r.json.ok === true && r.json.aiGenerated === true)
-  check("score is the server-calculated score out of 20", r.json.score === expected.score && r.json.maxScore === 20)
+  check("score is the server-calculated score out of 26", r.json.score === expected.score && r.json.maxScore === 26)
   check("advisor has exactly summary, positiveFinding, priorities, limitations", JSON.stringify(Object.keys(r.json.advisor)) === '["summary","positiveFinding","priorities","limitations"]')
   check("browser response: each priority has exactly controlId, title, area, explanation, firstStep, with server-approved wording",
     r.json.advisor.priorities.length === 3 && r.json.advisor.priorities.every((p, i) =>

@@ -1,91 +1,16 @@
+import { MAX_SCORE, assess, isAnswerArray } from "../../site/assessment.js"
+
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 const MAX_BODY_BYTES = 8192
 // Application-level latency and cost control for a short explanation. It is not a platform limit:
 // Netlify's synchronous function limit is 60 seconds.
 const TIMEOUT_MS = 8500
 const MAX_OUTPUT_TOKENS = 1500
-const MAX_SCORE = 20
 const AUDIENCES = new Set(["business-owner", "it-admin"])
-const LEVELS = new Set(["yes", "partly", "no"])
-
-// Approved catalogue, in question order. It must match `this.actions` in the app (plus the control
-// ids); scripts/verify-site.mjs fails the Netlify build if the two ever differ.
-const APPROVED_CATALOGUE = [
-  {
-    "id": "mfa",
-    "area": "Identity",
-    "title": "Require MFA for email and administrator accounts.",
-    "why": "MFA adds protection when a password is stolen.",
-    "first": "Identify email and administrator accounts that do not require MFA."
-  },
-  {
-    "id": "passwords",
-    "area": "Passwords",
-    "title": "Adopt unique passwords and an approved password manager.",
-    "why": "Reused passwords allow one stolen password to affect several accounts.",
-    "first": "Identify shared or reused passwords and select an approved password manager."
-  },
-  {
-    "id": "backups",
-    "area": "Recovery",
-    "title": "Document backups and complete a controlled restore test.",
-    "why": "A backup provides value only when the business can restore its information.",
-    "first": "Select one important file and complete a controlled restore test."
-  },
-  {
-    "id": "updates",
-    "area": "Updates",
-    "title": "Create a regular update process.",
-    "why": "Updates correct known security weaknesses and software defects.",
-    "first": "List business devices and confirm whether automatic updates are enabled."
-  },
-  {
-    "id": "endpoint",
-    "area": "Devices",
-    "title": "Enable and monitor endpoint protection.",
-    "why": "Endpoint protection helps identify and contain malicious activity on business devices.",
-    "first": "Confirm which devices lack active protection or central monitoring."
-  },
-  {
-    "id": "encryption",
-    "area": "Data protection",
-    "title": "Enable full-disk encryption on portable business devices.",
-    "why": "Encryption reduces data exposure if a device is lost or stolen.",
-    "first": "Check the encryption status of every business laptop."
-  },
-  {
-    "id": "awareness",
-    "area": "People",
-    "title": "Provide practical phishing-awareness training.",
-    "why": "Employees need a clear way to recognize and report suspicious messages.",
-    "first": "Schedule a short training session and explain how to report suspicious email."
-  },
-  {
-    "id": "admin-accounts",
-    "area": "Access",
-    "title": "Separate administrator accounts from daily-use accounts.",
-    "why": "Separate accounts reduce unnecessary use of powerful permissions.",
-    "first": "Identify people who use administrator access for email or normal browsing."
-  },
-  {
-    "id": "incident-plan",
-    "area": "Response",
-    "title": "Create a one-page incident contact and response plan.",
-    "why": "Clear contacts and first steps reduce confusion during an incident.",
-    "first": "Document who employees contact when they suspect phishing or account compromise."
-  },
-  {
-    "id": "remote-access",
-    "area": "Remote access",
-    "title": "Restrict remote access and require MFA.",
-    "why": "Exposed or weakly protected remote access can provide entry to business systems.",
-    "first": "List remote-access methods and confirm the approved users and MFA status."
-  }
-]
 
 const SYSTEM_PROMPT = [
-  "You write short, plain-language explanations for SecureStart AI, an educational small-business security self-assessment.",
-  "You receive one JSON object of server-verified facts: audience, score, maxScore, strengthIds, gapIds and actions. Use only those facts.",
+  "You write short, plain-language explanations for the Defenssive Security Self-Assessment, an educational small-business security self-assessment.",
+  'You receive one JSON object of server-verified facts: audience, score, maxScore, strengthIds, gapIds and actions. Use only those facts. Each action has an answer field: "no", "partly" or "unsure" ("unsure" means the business was not sure, so the action is to find out).',
   "Rules:",
   "- Do not add, remove, reorder or rename controls or actions. Do not invent scores, severity, risk ratings, statistics or deadlines.",
   "- Never say the business is secure, safe, unsafe, insecure, compliant or non-compliant, and never claim certification or a guarantee.",
@@ -105,7 +30,7 @@ const UNAVAILABLE = {
 }
 
 const reply = (status, body, headers = {}) =>
-  Response.json(body, { status, headers: { "Cache-Control": "no-store", ...headers } })
+  Response.json(body, { status, headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", ...headers } })
 
 const unavailable = () => reply(503, UNAVAILABLE)
 const invalid = (status, error) => reply(status, { ok: false, error, message: "Check the request and try again." })
@@ -114,33 +39,17 @@ const isPlainObject = (value) => value !== null && typeof value === "object" && 
 const hasExactKeys = (value, keys) =>
   Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key))
 
-// Server authority: the score, strengths, gaps and the three actions come only from the answers
-// and the approved catalogue. Nothing about them is ever taken from the client.
-const assess = (answers) => {
-  let score = 0
-  const noActions = []
-  const partlyActions = []
-  answers.forEach((level, index) => {
-    if (level === "yes") score += 2
-    else if (level === "partly") { score += 1; partlyActions.push(APPROVED_CATALOGUE[index]) }
-    else noActions.push(APPROVED_CATALOGUE[index])
-  })
-  return {
-    score,
-    strengths: APPROVED_CATALOGUE.filter((_, index) => answers[index] === "yes"),
-    gaps: APPROVED_CATALOGUE.filter((_, index) => answers[index] !== "yes"),
-    actions: [...noActions, ...partlyActions].slice(0, 3)
-  }
-}
+// Server authority: the score, strengths, gaps and the three actions come only from the answers and
+// the approved assessment module (site/assessment.js). Nothing about them is taken from the client.
 
 // The only content ever sent to Claude.
 const buildFacts = (audience, { score, strengths, gaps, actions }) => ({
   audience,
   score,
   maxScore: MAX_SCORE,
-  strengthIds: strengths.map((entry) => entry.id),
-  gapIds: gaps.map((entry) => entry.id),
-  actions: actions.map(({ id, area, title, why, first }) => ({ controlId: id, area, title, why, first }))
+  strengthIds: strengths.map((question) => question.id),
+  gapIds: gaps.map(({ question }) => question.id),
+  actions: actions.map(({ id, area, title, why, first, level }) => ({ controlId: id, area, title, why, first, answer: level }))
 })
 
 const LINK_PATTERNS = [
@@ -249,11 +158,12 @@ const handle = async (request) => {
 
   const valid = isPlainObject(data) && hasExactKeys(data, ["answers", "audience"]) &&
     typeof data.audience === "string" && AUDIENCES.has(data.audience) &&
-    Array.isArray(data.answers) && data.answers.length === APPROVED_CATALOGUE.length &&
-    data.answers.every((answer) => typeof answer === "string" && LEVELS.has(answer))
+    isAnswerArray(data.answers)
   if (!valid) return invalid(400, "invalid_request")
 
   const assessment = assess(data.answers)
+  // Nothing to explain when every answer is Yes: no provider call is made.
+  if (assessment.actions.length === 0) return invalid(400, "invalid_request")
   const text = await askClaude({ apiKey, model, facts: buildFacts(data.audience, assessment) })
   const advisor = text === null ? null : validateAdvisor(text, assessment)
   if (advisor === null) {
