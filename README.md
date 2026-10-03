@@ -124,8 +124,9 @@ Never commit these, print them or put them in screenshots.
 | `TURNSTILE_SECRET_KEY` | Bot-check secret (server only). Email fails closed without it. |
 | `RATE_LIMIT_SALT` | Optional random string that salts the rate-limit hashes. |
 
-The **public** Turnstile site key goes in `site/index.html`, in `<meta name="turnstile-site-key" content="">`.
-While it is empty the email form shows "Email delivery is not switched on yet" (it fails closed).
+The **public** Turnstile site key is set in `site/index.html`, in `<meta name="turnstile-site-key" content="...">`
+(it is not a secret). If it is ever emptied, the email form shows "Email delivery is not switched on yet" (it fails
+closed). The matching secret is only the `TURNSTILE_SECRET_KEY` environment variable.
 
 ## Security headers
 

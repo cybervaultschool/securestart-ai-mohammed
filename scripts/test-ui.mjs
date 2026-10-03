@@ -113,7 +113,7 @@ const server = http.createServer(async (req, res) => {
   const file = join(ROOT, normalize(pathname))
   if (file.startsWith(ROOT) && existsSync(file)) {
     let body = readFileSync(file)
-    if (pathname === "/index.html" && mock.siteKey) body = Buffer.from(body.toString("utf8").replace('name="turnstile-site-key" content=""', `name="turnstile-site-key" content="${mock.siteKey}"`))
+    if (pathname === "/index.html") body = Buffer.from(body.toString("utf8").replace(/name="turnstile-site-key" content="[^"]*"/, `name="turnstile-site-key" content="${mock.siteKey}"`))
     if (pathname === "/index.html" && url.searchParams.has("seed")) {
       body = Buffer.from(body.toString("utf8").replace('<script type="module"', `<script src="/__seed.js?screen=${url.searchParams.get("seed")}&q=${url.searchParams.get("q") ?? 0}"></script>
   <script type="module"`))

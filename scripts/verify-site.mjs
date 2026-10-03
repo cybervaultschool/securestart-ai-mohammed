@@ -165,8 +165,10 @@ check("privacy notice keeps unknown facts marked [OWNER TO CONFIRM] (no invented
 const walk = (dir) => readdirSync(join(root, dir)).flatMap((name) => (statSync(join(root, dir, name)).isDirectory() ? walk(join(dir, name)) : [join(dir, name)]))
 const published = walk("site")
 check("published folder holds only expected files", published.every((file) => /\.(html|js|css|png|ico|woff2)$/.test(file)), published.filter((file) => !/\.(html|js|css|png|ico|woff2)$/.test(file)).join(", "))
+// Turnstile secrets and site keys look alike (0x4AAAAAA...). Only the one public site key in its meta tag is allowed.
+const htmlWithoutSiteKey = html.replace(/<meta name="turnstile-site-key" content="0x4AAAAAA[A-Za-z0-9_-]{10,}">/, "")
 check("no secret-looking value in the repository's published or function code",
-  ![html, privacy, app, shared, css, aiSource, reportCore, reportFn].some((text) => /sk-ant-[A-Za-z0-9_-]{10,}|re_[A-Za-z0-9]{20,}|0x4AAAAAA[A-Za-z0-9_-]{10,}/.test(text)))
+  ![htmlWithoutSiteKey, privacy, app, shared, css, aiSource, reportCore, reportFn].some((text) => /sk-ant-[A-Za-z0-9_-]{10,}|re_[A-Za-z0-9]{20,}|0x4AAAAAA[A-Za-z0-9_-]{10,}/.test(text)))
 
 if (failures.length) {
   console.error(`\nverify-site: ${failures.length} check(s) failed`)
